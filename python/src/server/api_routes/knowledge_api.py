@@ -233,6 +233,16 @@ async def get_knowledge_item_code_examples(source_id: str):
 
         # Query code examples with full content for this specific source
         supabase = get_supabase_client()
+
+        # First, let's check what source_ids exist in the code examples table
+        all_sources = (
+            supabase.from_("archon_code_examples")
+            .select("source_id")
+            .execute()
+        )
+        unique_sources = list(set([item['source_id'] for item in (all_sources.data or [])]))
+        safe_logfire_info(f"Available source_ids in code_examples table: {unique_sources}")
+
         result = (
             supabase.from_("archon_code_examples")
             .select("id, source_id, content, summary, metadata")
@@ -248,7 +258,42 @@ async def get_knowledge_item_code_examples(source_id: str):
         if code_examples:
             safe_logfire_info(f"Sample code example structure: {code_examples[0]}")
             for i, example in enumerate(code_examples[:3]):  # Log first 3 examples
-                safe_logfire_info(f"Example {i}: content_length={len(example.get('content', ''))}, summary='{example.get('summary', '')[:100]}...', metadata={example.get('metadata', {})}")
+                content_preview = example.get('content', '')[:200] if example.get('content') else 'NO CONTENT'
+                safe_logfire_info(f"Example {i}: content_length={len(example.get('content', ''))}, content_preview='{content_preview}', summary='{example.get('summary', '')[:100]}...', metadata={example.get('metadata', {})}")
+        else:
+            safe_logfire_info(f"No code examples found in database for source_id: {source_id}")
+            # Let's also check if there are any records at all for this source
+            all_records = (
+                supabase.from_("archon_code_examples")
+                .select("id, source_id")
+                .eq("source_id", source_id)
+                .execute()
+            )
+            safe_logfire_info(f"Total records for {source_id}: {len(all_records.data) if all_records.data else 0}")
+
+            # Also check if there are similar source_ids (maybe with different timestamps)
+            similar_sources = (
+                supabase.from_("archon_code_examples")
+                .select("source_id")
+                .like("source_id", f"%{source_id.split('_')[1] if '_' in source_id else source_id}%")
+                .execute()
+            )
+            if similar_sources.data:
+                similar_ids = [item['source_id'] for item in similar_sources.data]
+                safe_logfire_info(f"Found similar source_ids: {similar_ids}")
+
+            # Check if the source exists in archon_sources table
+            source_check = (
+                supabase.from_("archon_sources")
+                .select("source_id, metadata")
+                .eq("source_id", source_id)
+                .execute()
+            )
+            if source_check.data:
+                metadata = source_check.data[0].get('metadata', {})
+                safe_logfire_info(f"Source exists in archon_sources with metadata: {metadata}")
+            else:
+                safe_logfire_info(f"Source {source_id} not found in archon_sources table")
 
         return {
             "success": True,

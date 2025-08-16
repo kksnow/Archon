@@ -1437,6 +1437,9 @@ class CodeExtractionService:
             summary = summary_result.get("summary", "Code example for demonstration purposes.")
             example_name = summary_result.get("example_name", "Code Example")
 
+            # Debug logging for code example preparation
+            safe_logfire_info(f"🔧 [CodeExtraction] Preparing code example: source_id={source_id}, url={source_url}, code_length={len(block['code'])}")
+
             code_urls.append(source_url)
             code_chunk_numbers.append(len(code_examples))
             code_examples.append(block["code"])

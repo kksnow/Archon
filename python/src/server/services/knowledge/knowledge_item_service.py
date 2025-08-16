@@ -384,7 +384,7 @@ class KnowledgeItemService:
                 "file_name": source_metadata.get("file_name"),
                 "file_type": source_metadata.get("file_type"),
                 "update_frequency": source.get("update_frequency", 7),
-                "code_examples_count": len(code_examples),
+                "code_examples_count": source_metadata.get("code_examples_count", len(code_examples)),
                 **source_metadata,
             },
             "created_at": source.get("created_at"),
@@ -413,6 +413,8 @@ class KnowledgeItemService:
     async def _get_code_examples(self, source_id: str) -> list[dict[str, Any]]:
         """Get code examples for a source."""
         try:
+            safe_logfire_info(f"🔍 [KnowledgeItemService] Fetching code examples for source_id: {source_id}")
+
             code_examples_response = (
                 self.supabase.from_("archon_code_examples")
                 .select("id, content, summary, metadata")
@@ -420,9 +422,18 @@ class KnowledgeItemService:
                 .execute()
             )
 
-            return code_examples_response.data if code_examples_response.data else []
+            result = code_examples_response.data if code_examples_response.data else []
+            safe_logfire_info(f"🔍 [KnowledgeItemService] Found {len(result)} code examples for {source_id}")
 
-        except Exception:
+            if result:
+                # Log first example for debugging
+                first_example = result[0]
+                safe_logfire_info(f"🔍 [KnowledgeItemService] First example: content_length={len(first_example.get('content', ''))}, summary='{first_example.get('summary', '')[:50]}...'")
+
+            return result
+
+        except Exception as e:
+            safe_logfire_error(f"🔍 [KnowledgeItemService] Error fetching code examples for {source_id}: {e}")
             return []
 
     def _determine_source_type(self, metadata: dict[str, Any], url: str) -> str:

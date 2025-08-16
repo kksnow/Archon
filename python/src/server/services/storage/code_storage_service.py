@@ -893,6 +893,9 @@ async def add_code_examples_to_supabase(
                 parsed_url = urlparse(urls[idx])
                 source_id = parsed_url.netloc or parsed_url.path
 
+            # Debug logging for code example storage
+            search_logger.info(f"🔧 [CodeStorage] Storing code example: source_id={source_id}, url={urls[idx]}, content_length={len(code_examples[idx])}")
+
             batch_data.append({
                 "url": urls[idx],
                 "chunk_number": chunk_numbers[idx],
