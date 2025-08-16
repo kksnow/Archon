@@ -69,6 +69,9 @@ class DocumentStorageService(BaseStorageService):
 
                 await report_progress("Starting document processing...", 10)
 
+                # Initialize code examples count
+                code_examples_count = 0
+
                 # Use base class chunking
                 chunks = await self.smart_chunk_text_async(
                     file_content,
@@ -152,6 +155,54 @@ class DocumentStorageService(BaseStorageService):
                     cancellation_check=cancellation_check,
                 )
 
+                await report_progress("Extracting code examples...", 80)
+
+                # Extract code examples from uploaded document (similar to web crawling pipeline)
+                code_examples_count = 0
+                try:
+                    # Import the code extraction service
+                    from ..crawling.code_extraction_service import CodeExtractionService
+
+                    # Create code extraction service instance
+                    code_extraction_service = CodeExtractionService(self.supabase_client)
+
+                    # Prepare crawl_results structure similar to web crawling
+                    crawl_results = []
+                    for i, chunk in enumerate(chunks):
+                        crawl_results.append({
+                            "url": doc_url,
+                            "markdown": chunk,  # Use chunk content as markdown
+                            "html": None,  # No HTML for uploaded documents
+                            "source_id": source_id,
+                        })
+
+                    # Create progress callback for code extraction
+                    async def code_progress_callback(data: dict):
+                        if progress_callback:
+                            # Map code extraction progress to 80-95% range
+                            code_percentage = data.get("percentage", 0)
+                            mapped_percentage = 80 + (code_percentage * 0.15)  # 80-95% range
+                            await progress_callback(
+                                f"Code extraction: {data.get('log', 'Processing...')}",
+                                mapped_percentage
+                            )
+
+                    # Extract and store code examples
+                    code_examples_count = await code_extraction_service.extract_and_store_code_examples(
+                        crawl_results,
+                        url_to_full_document,
+                        code_progress_callback,
+                        0,  # Start at 0% for code extraction phase
+                        100,  # End at 100% for code extraction phase
+                    )
+
+                    await report_progress(f"Code extraction completed! Found {code_examples_count} code examples.", 95)
+
+                except Exception as e:
+                    # Log error but don't fail the entire upload
+                    logger.warning(f"Code extraction failed for {filename}: {e}")
+                    await report_progress("Code extraction failed, but document upload completed.", 95)
+
                 await report_progress("Document upload completed!", 100)
 
                 result = {
@@ -159,6 +210,7 @@ class DocumentStorageService(BaseStorageService):
                     "total_word_count": total_word_count,
                     "source_id": source_id,
                     "filename": filename,
+                    "code_examples_count": code_examples_count,
                 }
 
                 span.set_attribute("success", True)
@@ -166,7 +218,7 @@ class DocumentStorageService(BaseStorageService):
                 span.set_attribute("total_word_count", total_word_count)
 
                 logger.info(
-                    f"Document upload completed successfully: filename={filename}, chunks_stored={len(chunks)}, total_word_count={total_word_count}"
+                    f"Document upload completed successfully: filename={filename}, chunks_stored={len(chunks)}, total_word_count={total_word_count}, code_examples_count={code_examples_count}"
                 )
 
                 return True, result
