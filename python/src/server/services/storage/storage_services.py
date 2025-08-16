@@ -198,6 +198,26 @@ class DocumentStorageService(BaseStorageService):
 
                     await report_progress(f"Code extraction completed! Found {code_examples_count} code examples.", 95)
 
+                    # Update source metadata with code examples count
+                    try:
+                        # Update source info with code examples count using the utility function
+                        await self.threading_service.run_io_bound(
+                            update_source_info,
+                            self.supabase_client,
+                            source_id,
+                            source_summary,
+                            total_word_count,
+                            file_content[:5000],  # content sample
+                            knowledge_type,
+                            tags,
+                            7,  # update_frequency
+                            None,  # original_url (not applicable for file uploads)
+                            code_examples_count,  # code_examples_count
+                        )
+                        logger.info(f"Updated source {source_id} with code_examples_count: {code_examples_count}")
+                    except Exception as meta_error:
+                        logger.warning(f"Failed to update source metadata with code examples count: {meta_error}")
+
                 except Exception as e:
                     # Log error but don't fail the entire upload
                     logger.warning(f"Code extraction failed for {filename}: {e}")

@@ -246,6 +246,7 @@ def update_source_info(
     tags: list[str] | None = None,
     update_frequency: int = 7,
     original_url: str | None = None,
+    code_examples_count: int | None = None,
 ):
     """
     Update or insert source information in the sources table.
@@ -259,6 +260,8 @@ def update_source_info(
         knowledge_type: Type of knowledge
         tags: List of tags
         update_frequency: Update frequency in days
+        original_url: Original URL for the source
+        code_examples_count: Number of code examples found in the source
     """
     try:
         # First, check if source already exists to preserve title
@@ -280,6 +283,8 @@ def update_source_info(
             }
             if original_url:
                 metadata["original_url"] = original_url
+            if code_examples_count is not None:
+                metadata["code_examples_count"] = code_examples_count
 
             # Update existing source (preserving title)
             result = (
@@ -307,6 +312,8 @@ def update_source_info(
             metadata["update_frequency"] = update_frequency
             if original_url:
                 metadata["original_url"] = original_url
+            if code_examples_count is not None:
+                metadata["code_examples_count"] = code_examples_count
 
             # Insert new source
             client.table("archon_sources").insert({
