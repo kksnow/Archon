@@ -239,15 +239,36 @@ export const KnowledgeItemCard = ({
   };
 
   // Format code examples for the modal (use loaded examples if available)
-  const codeExamples: CodeExample[] = 
-    (loadedCodeExamples || item.code_examples || []).map((example: any, index: number) => ({
-      id: example.id || `${item.id}-example-${index}`,
-      title: example.metadata?.example_name || example.metadata?.title || example.summary?.split('\n')[0] || 'Code Example',
-      description: example.summary || 'No description available',
-      language: example.metadata?.language || guessLanguageFromTitle(example.metadata?.title || ''),
-      code: example.content || example.metadata?.code || '// Code example not available',
-      tags: example.metadata?.tags || [],
-    }));
+  const codeExamples: CodeExample[] =
+    (loadedCodeExamples || item.code_examples || []).map((example: any, index: number) => {
+      // Debug logging to understand the data structure
+      console.log('🔍 [CodeExample] Raw example data:', example);
+      console.log('🔍 [CodeExample] Content:', example.content);
+      console.log('🔍 [CodeExample] Summary:', example.summary);
+      console.log('🔍 [CodeExample] Metadata:', example.metadata);
+
+      // Try multiple ways to get the code content
+      let codeContent = example.content || example.metadata?.code || example.code || '';
+
+      // If still no content, try to extract from summary if it looks like code
+      if (!codeContent && example.summary && (example.summary.includes('```') || example.summary.includes('function') || example.summary.includes('class'))) {
+        codeContent = example.summary;
+      }
+
+      // Final fallback
+      if (!codeContent) {
+        codeContent = '// Code example content not available\n// This might be a data structure issue';
+      }
+
+      return {
+        id: example.id || `${item.id}-example-${index}`,
+        title: example.metadata?.example_name || example.metadata?.title || example.summary?.split('\n')[0] || `Code Example ${index + 1}`,
+        description: example.summary || 'No description available',
+        language: example.metadata?.language || guessLanguageFromTitle(example.metadata?.title || '') || 'text',
+        code: codeContent,
+        tags: example.metadata?.tags || [],
+      };
+    });
 
   return (
     <div

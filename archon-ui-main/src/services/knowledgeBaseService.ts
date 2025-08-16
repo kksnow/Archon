@@ -287,13 +287,22 @@ class KnowledgeBaseService {
    */
   async getCodeExamples(sourceId: string) {
     console.log('📚 [KnowledgeBase] Fetching code examples for:', sourceId);
-    
-    return apiRequest<{
+
+    const response = await apiRequest<{
       success: boolean
       source_id: string
       code_examples: any[]
       count: number
     }>(`/knowledge-items/${sourceId}/code-examples`);
+
+    // Debug logging for code examples response
+    console.log('📚 [KnowledgeBase] Code examples response:', response);
+    if (response.code_examples && response.code_examples.length > 0) {
+      console.log('📚 [KnowledgeBase] First code example:', response.code_examples[0]);
+      console.log('📚 [KnowledgeBase] Content length:', response.code_examples[0]?.content?.length || 0);
+    }
+
+    return response;
   }
 }
 

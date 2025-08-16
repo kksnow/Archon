@@ -166,6 +166,13 @@ class CodeExtractionService:
             crawl_results, progress_callback, start_progress, extract_end
         )
 
+        # Debug logging for document content analysis
+        safe_logfire_info(f"🔍 [CodeExtraction] Processing {len(crawl_results)} documents")
+        for i, doc in enumerate(crawl_results[:3]):  # Log first 3 documents
+            content = doc.get('markdown', '') or doc.get('content', '')
+            has_code_blocks = '```' in content
+            safe_logfire_info(f"🔍 [CodeExtraction] Doc {i}: has_markdown_blocks={has_code_blocks}, content_length={len(content)}")
+
         if not all_code_blocks:
             safe_logfire_info("No code examples found in any crawled documents")
             # Still report completion when no code examples found
@@ -192,6 +199,11 @@ class CodeExtractionService:
 
         # Prepare code examples for storage
         storage_data = self._prepare_code_examples_for_storage(all_code_blocks, summary_results)
+
+        # Debug logging for storage data
+        safe_logfire_info(f"🔧 [CodeExtraction] Prepared {len(storage_data.get('examples', []))} code examples for storage")
+        if storage_data.get('examples'):
+            safe_logfire_info(f"🔧 [CodeExtraction] Sample code example: {storage_data['examples'][0][:100]}...")
 
         # Store code examples in database with final phase progress
         return await self._store_code_examples(

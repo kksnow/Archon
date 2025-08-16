@@ -244,6 +244,12 @@ async def get_knowledge_item_code_examples(source_id: str):
 
         safe_logfire_info(f"Found {len(code_examples)} code examples for {source_id}")
 
+        # Debug logging to understand the data structure
+        if code_examples:
+            safe_logfire_info(f"Sample code example structure: {code_examples[0]}")
+            for i, example in enumerate(code_examples[:3]):  # Log first 3 examples
+                safe_logfire_info(f"Example {i}: content_length={len(example.get('content', ''))}, summary='{example.get('summary', '')[:100]}...', metadata={example.get('metadata', {})}")
+
         return {
             "success": True,
             "source_id": source_id,
